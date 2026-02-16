@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: marketplace-service
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: WALLET_ADDRESS
+        value: 6eUdVwsPArTxwVqEARYGCh4S2qwW2zCs7jSEDRpxydnv
+      - key: WALLET_ADDRESS_BASE
+        value: "0xF8cD900794245fc36CBE65be9afc23CDF5103042"
+      - key: PRICE_USDC
+        value: "0.005"
+      - key: RATE_LIMIT
+        value: "60"
+      - key: PROXY_HOST
+        sync: false
+      - key: PROXY_HTTP_PORT
+        sync: false
+      - key: PROXY_USER
+        sync: false
+      - key: PROXY_PASS
+        sync: false
+      - key: PROXY_COUNTRY
+        value: US

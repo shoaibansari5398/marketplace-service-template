@@ -64,17 +64,18 @@ setInterval(() => {
 app.get('/health', (c) => c.json({
   status: 'healthy',
   service: process.env.SERVICE_NAME || 'marketplace-service',
-  version: '1.0.0',
+  version: '1.1.0',
   timestamp: new Date().toISOString(),
-  endpoints: ['/api/jobs', '/api/reviews/search', '/api/reviews/:place_id', '/api/reviews/summary/:place_id', '/api/business/:place_id'],
+  endpoints: ['/api/jobs', '/api/reddit', '/api/reviews/search', '/api/reviews/:place_id', '/api/reviews/summary/:place_id', '/api/business/:place_id'],
 }));
 
 app.get('/', (c) => c.json({
-  name: process.env.SERVICE_NAME || 'job-market-intelligence',
-  description: process.env.SERVICE_DESCRIPTION || 'Job Market Intelligence API (Indeed/LinkedIn)',
-  version: '1.0.0',
+  name: process.env.SERVICE_NAME || 'marketplace-service',
+  description: process.env.SERVICE_DESCRIPTION || 'Marketplace Intelligence API (Jobs + Reddit + Reviews)',
+  version: '1.1.0',
   endpoints: [
     { method: 'GET', path: '/api/jobs', description: 'Get job listings (Indeed/LinkedIn) with salary + date + proxy metadata' },
+    { method: 'GET', path: '/api/reddit', description: 'Search Reddit, browse subreddits, fetch post comments + proxy metadata' },
     { method: 'GET', path: '/api/reviews/search', description: 'Search businesses by query + location', price: '0.01 USDC' },
     { method: 'GET', path: '/api/reviews/:place_id', description: 'Fetch Google reviews by Place ID', price: '0.02 USDC' },
     { method: 'GET', path: '/api/business/:place_id', description: 'Get business details + review summary', price: '0.01 USDC' },
@@ -112,7 +113,7 @@ app.get('/', (c) => c.json({
 
 app.route('/api', serviceRouter);
 
-app.notFound((c) => c.json({ error: 'Not found', endpoints: ['/', '/health', '/api/jobs', '/api/reviews/search', '/api/reviews/:place_id', '/api/business/:place_id', '/api/reviews/summary/:place_id'] }, 404));
+app.notFound((c) => c.json({ error: 'Not found', endpoints: ['/', '/health', '/api/jobs', '/api/reddit', '/api/reviews/search', '/api/reviews/:place_id', '/api/business/:place_id', '/api/reviews/summary/:place_id'] }, 404));
 
 app.onError((err, c) => {
   console.error(`[ERROR] ${err.message}`);

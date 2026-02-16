@@ -1,0 +1,53 @@
+{
+  "id": "reddit-intelligence",
+  "name": "Reddit Intelligence API",
+  "description": "Search Reddit posts, browse subreddits, and fetch comments via mobile proxies. Returns structured post data with scores, flair, awards, and proxy metadata.",
+  "longDescription": "Scrape Reddit through real 4G/5G carrier IPs using Proxies.sx mobile proxies. Three modes: search posts by keyword, browse any subreddit (hot/new/top/rising), or fetch full comment threads for a post. Returns title, selftext, author, subreddit, score, upvote ratio, comment count, flair, awards, NSFW flag, and proxy exit IP metadata. Pagination supported via Reddit's `after` token. At $0.005/query with authentic mobile IPs, ideal for market research, brand monitoring, and competitive intelligence.",
+  "endpoint": "https://marketplace-service-template-cwgj.onrender.com/api/reddit",
+  "docsUrl": "https://github.com/bolivian-peru/marketplace-service-template/blob/master/PR-REDDIT-INTELLIGENCE.md",
+  "pricing": {
+    "model": "per-request",
+    "amount": "0.005",
+    "minimum": "0.005",
+    "currency": "USDC",
+    "networks": [
+      {
+        "network": "solana",
+        "chainId": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+        "recipient": "6eUdVwsPArTxwVqEARYGCh4S2qwW2zCs7jSEDRpxydnv",
+        "asset": "USDC",
+        "assetAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "network": "base",
+        "chainId": "eip155:8453",
+        "recipient": "0xF8cD900794245fc36CBE65be9afc23CDF5103042",
+        "asset": "USDC",
+        "assetAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+      }
+    ]
+  },
+  "category": "scraper",
+  "tags": [
+    "reddit",
+    "social-media",
+    "scraper",
+    "intelligence",
+    "comments",
+    "subreddit",
+    "search",
+    "sentiment",
+    "market-research"
+  ],
+  "owner": {
+    "name": "shoaibansari5398",
+    "github": "shoaibansari5398"
+  },
+  "status": "pending",
+  "featured": false,
+  "addedAt": "2026-02-17",
+  "x402": {
+    "discoveryUrl": "https://marketplace-service-template-cwgj.onrender.com/api/reddit",
+    "wellKnown": "https://marketplace-service-template-cwgj.onrender.com/.well-known/x402.json"
+  }
+}

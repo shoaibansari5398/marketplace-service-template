@@ -1,8 +1,9 @@
 /**
- * Service Router — Job Market Intelligence (Bounty #16)
+ * Service Router — Marketplace Service
  *
- * Exposes ONLY:
- *   GET /api/jobs
+ * Exposes:
+ *   GET /api/jobs    — Job Market Intelligence (Bounty #16)
+ *   GET /api/reddit  — Reddit Intelligence (Bounty #68)
  */
 
 import { Hono } from 'hono';
@@ -10,12 +11,11 @@ import { proxyFetch, getProxy } from './proxy';
 import { extractPayment, verifyPayment, build402Response } from './payment';
 import { scrapeIndeed, scrapeLinkedIn, type JobListing } from './scrapers/job-scraper';
 import { fetchReviews, fetchBusinessDetails, fetchReviewSummary, searchBusinesses } from './scrapers/reviews';
+import { scrapeRedditSearch, scrapeSubreddit, scrapePostComments } from './scrapers/reddit-scraper';
 
 export const serviceRouter = new Hono();
 
-const SERVICE_NAME = 'job-market-intelligence';
 const PRICE_USDC = 0.005;
-const DESCRIPTION = 'Job Market Intelligence API (Indeed/LinkedIn): title, company, location, salary, date, link, remote + proxy exit metadata.';
 
 async function getProxyExitIp(): Promise<string | null> {
   try {
@@ -32,8 +32,11 @@ async function getProxyExitIp(): Promise<string | null> {
   }
 }
 
+// ─── JOBS ENDPOINT (Bounty #16) ─────────────────────
+
 serviceRouter.get('/jobs', async (c) => {
   const walletAddress = '6eUdVwsPArTxwVqEARYGCh4S2qwW2zCs7jSEDRpxydnv';
+  const DESCRIPTION = 'Job Market Intelligence API (Indeed/LinkedIn): title, company, location, salary, date, link, remote + proxy exit metadata.';
 
   const payment = extractPayment(c);
   if (!payment) {
@@ -333,5 +336,135 @@ serviceRouter.get('/business/:place_id', async (c) => {
     });
   } catch (err: any) {
     return c.json({ error: 'Business details fetch failed', message: err?.message || String(err) }, 502);
+  }
+});
+
+// ─── REDDIT ENDPOINT (Bounty #68) ───────────────────
+
+serviceRouter.get('/reddit', async (c) => {
+  const walletAddress = '6eUdVwsPArTxwVqEARYGCh4S2qwW2zCs7jSEDRpxydnv';
+  const DESCRIPTION = 'Reddit Intelligence API: search posts, browse subreddits, fetch comments. Returns title, selftext, author, score, upvote ratio, comments count, flair, awards + proxy metadata.';
+
+  const payment = extractPayment(c);
+  if (!payment) {
+    return c.json(
+      build402Response(
+        '/api/reddit',
+        DESCRIPTION,
+        PRICE_USDC,
+        walletAddress,
+        {
+          input: {
+            query: 'string (required for search, ignored if subreddit is set)',
+            subreddit: 'string (optional) — browse a specific subreddit instead of searching',
+            sort: '"relevance" | "hot" | "new" | "top" | "rising" | "comments" (default: "relevance" for search, "hot" for subreddit)',
+            time: '"hour" | "day" | "week" | "month" | "year" | "all" (default: "all")',
+            limit: 'number (optional, default: 25, max: 100)',
+            after: 'string (optional) — pagination token from previous response',
+            comments: 'string (optional) — permalink of a post to fetch comments for',
+          },
+          output: {
+            posts: 'RedditPost[] — title, selftext, author, subreddit, score, upvoteRatio, numComments, createdUtc, permalink, url, isSelf, flair, awards, over18',
+            after: 'string | null — pagination token for next page',
+            meta: {
+              proxy: '{ ip, country, host, type:"mobile" }',
+            },
+          },
+        },
+      ),
+      402,
+    );
+  }
+
+  const verification = await verifyPayment(payment, walletAddress, PRICE_USDC);
+  if (!verification.valid) return c.json({ error: 'Payment verification failed', reason: verification.error }, 402);
+
+  const query = c.req.query('query') || '';
+  const subreddit = c.req.query('subreddit') || '';
+  const sort = c.req.query('sort') || (subreddit ? 'hot' : 'relevance');
+  const timeFilter = c.req.query('time') || 'all';
+  const limit = Math.min(Math.max(parseInt(c.req.query('limit') || '25') || 25, 1), 100);
+  const after = c.req.query('after') || undefined;
+  const commentsPermalink = c.req.query('comments') || '';
+
+  try {
+    const proxy = getProxy();
+    const ip = await getProxyExitIp();
+
+    // Mode 1: Fetch comments for a specific post
+    if (commentsPermalink) {
+      const commentSort = c.req.query('comment_sort') || 'best';
+      const comments = await scrapePostComments(commentsPermalink, limit, commentSort);
+
+      c.header('X-Payment-Settled', 'true');
+      c.header('X-Payment-TxHash', payment.txHash);
+
+      return c.json({
+        comments,
+        meta: {
+          permalink: commentsPermalink,
+          limit,
+          proxy: { ip, country: proxy.country, host: proxy.host, type: 'mobile' },
+        },
+        payment: {
+          txHash: payment.txHash,
+          network: payment.network,
+          amount: verification.amount,
+          settled: true,
+        },
+      });
+    }
+
+    // Mode 2: Browse a subreddit
+    if (subreddit) {
+      const result = await scrapeSubreddit(subreddit, sort, limit, after, timeFilter);
+
+      c.header('X-Payment-Settled', 'true');
+      c.header('X-Payment-TxHash', payment.txHash);
+
+      return c.json({
+        ...result,
+        meta: {
+          subreddit,
+          sort,
+          limit,
+          proxy: { ip, country: proxy.country, host: proxy.host, type: 'mobile' },
+        },
+        payment: {
+          txHash: payment.txHash,
+          network: payment.network,
+          amount: verification.amount,
+          settled: true,
+        },
+      });
+    }
+
+    // Mode 3: Search Reddit
+    if (!query) {
+      return c.json({ error: 'Missing required parameter: query (or provide subreddit)' }, 400);
+    }
+
+    const result = await scrapeRedditSearch(query, sort, limit, after, timeFilter);
+
+    c.header('X-Payment-Settled', 'true');
+    c.header('X-Payment-TxHash', payment.txHash);
+
+    return c.json({
+      ...result,
+      meta: {
+        query,
+        sort,
+        limit,
+        proxy: { ip, country: proxy.country, host: proxy.host, type: 'mobile' },
+      },
+      payment: {
+        txHash: payment.txHash,
+        network: payment.network,
+        amount: verification.amount,
+        settled: true,
+      },
+    });
+  } catch (err: any) {
+    return c.json({ error: 'Reddit scrape failed', message: err?.message || String(err) }, 502);
   }
 });
